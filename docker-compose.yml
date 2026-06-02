@@ -83,6 +83,14 @@ services:
       taiga-async-rabbitmq:
         condition: service_started
 
+  postfix:
+    image: mailhog/mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - taiga
+
   taiga-async-rabbitmq:
     image: rabbitmq:3.8-management-alpine
     environment:

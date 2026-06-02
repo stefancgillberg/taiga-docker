@@ -157,6 +157,24 @@ EMAIL_USE_TLS=True  # use TLS (secure) connection with the SMTP server
 EMAIL_USE_SSL=False  # use implicit TLS (secure) connection with the SMTP server
 ```
 
+For local testing, you can run MailCatcher and route Taiga emails to it:
+
+```bash
+docker run -d -p 1026:1025 -p 1080:1080 schickling/mailcatcher
+```
+
+Then use these values in `.env`:
+
+```bash
+EMAIL_BACKEND=smtp
+EMAIL_HOST=mailcatcher
+EMAIL_PORT=1025
+EMAIL_HOST_USER=
+EMAIL_HOST_PASSWORD=
+EMAIL_USE_TLS=False
+EMAIL_USE_SSL=False
+```
+
 ### Queue manager settings
 
 These variables are used to leave messages in the rabbitmq services.
