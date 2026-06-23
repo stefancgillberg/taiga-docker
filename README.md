@@ -543,6 +543,54 @@ server {
 }
 ```
 
+## Backup and Restore
+
+A backup script is included to back up the database and media files of this Taiga instance.
+
+### What gets backed up
+
+- **Database** — a full PostgreSQL dump of all projects and data
+- **Media files** — all uploaded attachments and files
+
+### Running a manual backup
+
+```sh
+$ ./backup-taiga.sh
+```
+
+Backups are saved to `~/taiga-backups/` by default. To use a custom directory:
+
+```sh
+$ ./backup-taiga.sh /path/to/backups
+```
+
+Each run produces two timestamped files:
+
+```
+taiga-db-20260623_143022.sql
+taiga-media-20260623_143022.tar.gz
+```
+
+Backups older than 30 days are deleted automatically. A log is written to `~/taiga-backups/backup.log`.
+
+### Scheduled backups
+
+A cron job runs the backup automatically at **08:00, 11:00, 14:00 and 17:00 every day**. To verify it is installed:
+
+```sh
+$ crontab -l
+```
+
+To reinstall the cron job if needed:
+
+```sh
+$ (crontab -l 2>/dev/null; echo "0 8,11,14,17 * * * /path/to/taiga-docker/backup-taiga.sh >> ~/taiga-backups/backup.log 2>&1") | crontab -
+```
+
+### Restore
+
+Refer to the [official Taiga backup and restore documentation](https://docs.taiga.io/backup-and-restore.html#docker) for restore instructions.
+
 ## Change between subpath and subdomain
 
 If you're changing Taiga configuration from default subdomain (https://taiga.mycompany.com) to subpath (http://mycompany.com/subpath) or vice versa, on top of adjusting the configuration as said above, you should consider changing the TAIGA_SECRET_KEY so the refresh works properly for the end user.
