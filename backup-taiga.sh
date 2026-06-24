@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
+
 BACKUP_DIR="${1:-$HOME/taiga-backups}"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 DB_BACKUP="$BACKUP_DIR/taiga-db-$TIMESTAMP.sql"
