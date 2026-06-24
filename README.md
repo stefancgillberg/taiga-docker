@@ -587,6 +587,50 @@ To reinstall the cron job if needed:
 $ (crontab -l 2>/dev/null; echo "0 8,11,14,17 * * * /path/to/taiga-docker/backup-taiga.sh >> ~/taiga-backups/backup.log 2>&1") | crontab -
 ```
 
+### Validating a backup
+
+Use `validate-backup.sh` to verify that a backup can be successfully restored. By default it spins up the full Taiga stack so you can browse the data in a web browser. Pass `--test` to run a lightweight database-only check instead.
+
+**Full stack (default) — browsable in a browser:**
+
+```sh
+$ ./validate-backup.sh taiga-db-<timestamp>.sql taiga-media-<timestamp>.tar.gz
+```
+
+Opens at **http://localhost:9001** when ready. The stack is left running after the script exits so you can inspect it.
+
+**Lightweight validation only:**
+
+```sh
+$ ./validate-backup.sh taiga-db-<timestamp>.sql taiga-media-<timestamp>.tar.gz --test
+```
+
+Restores the database into an isolated container, runs verification queries, checks the media archive, then leaves the container running.
+
+**Options:**
+
+| Flag | Description |
+|---|---|
+| `--name <name>` | Name for the Docker container / compose project (default: `taiga-backup-validate`) |
+| `--port <port>` | Port for the web UI in full-stack mode (default: `9001`) |
+| `--test` | Lightweight mode: validate the backup files without starting the full stack |
+| `--remove` | Remove the Docker instance when the script exits (default is to leave it running) |
+
+**Examples:**
+
+```sh
+# Full stack on a custom port, remove when done
+$ ./validate-backup.sh taiga-db-20260624.sql taiga-media-20260624.tar.gz --port 9002 --remove
+
+# Keep a named instance around for manual inspection
+$ ./validate-backup.sh taiga-db-20260624.sql taiga-media-20260624.tar.gz --name taiga-june24
+
+# Tear down a named instance manually
+$ docker compose -p taiga-june24 -f docker-compose.yml down -v
+```
+
+The script prints a summary of restored data (users, projects, user stories) and exits with a non-zero status on failure.
+
 ### Restore
 
 Refer to the [official Taiga backup and restore documentation](https://docs.taiga.io/backup-and-restore.html#docker) for restore instructions.
