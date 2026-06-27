@@ -3,13 +3,14 @@
 
 Pass the epic IDs to remove as positional arguments:
 
-    TAIGA_USER=admin TAIGA_PASS=admin TAIGA_SLUG=wrong_slug \\
-        python3 cleanup_wrong_project.py 16 17 18 19 20 21 22
+    TAIGA_USER=<user-name> TAIGA_PASS=<your-password> TAIGA_SLUG=<project-slug> \\
+        python3 cleanup_wrong_project.py <epic-id> <epic-id> <epic-id>
 
 Optional overrides:
     TAIGA_HOST   (default http://100.118.163.55:9000)
     TAIGA_SLUG   (default <your-project-slug>)
 """
+
 import json, os, sys, urllib.error, urllib.request
 
 HOST = os.environ.get("TAIGA_HOST", "http://100.118.163.55:9000").rstrip("/")
