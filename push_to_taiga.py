@@ -33,12 +33,12 @@ Sätt status per story genom att lägga till ett valfritt "status"-fält i JSON
     { "subject": "US-B1 — ...", "status": "In progress", "tags": [...], "description": "..." }
 Stories utan "status" lämnas orörda i sitt nuvarande tillstånd.
 
-Kända statusar i stromstad_kommun (gäller även de flesta Taiga-projekt):
+Kända statusar i <project-slug> (gäller även de flesta Taiga-projekt):
     new | ready | in progress | ready for test | done | archived
 
 Valfria override:
     TAIGA_HOST   (default http://100.118.163.55:9000)
-    TAIGA_SLUG   (default stromstad_kommun)
+    TAIGA_SLUG   (default <project-slug>)
     DRY_RUN=1    skriver bara ut vad som skulle göras, anropar inte API:t
 
 Story-filens format (JSON):
@@ -68,7 +68,7 @@ import urllib.parse
 import urllib.request
 
 HOST = os.environ.get("TAIGA_HOST", "http://100.118.163.55:9000").rstrip("/")
-SLUG = os.environ.get("TAIGA_SLUG", "stromstad_kommun")
+SLUG = os.environ.get("TAIGA_SLUG", "<project-slug>")
 USER = os.environ.get("TAIGA_USER")
 PASS = os.environ.get("TAIGA_PASS")
 DRY_RUN = os.environ.get("DRY_RUN") == "1"
