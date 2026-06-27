@@ -302,7 +302,11 @@ def find_or_create_epic(token, project_id, subject, existing_epics):
 def linked_story_ids(token, epic_id):
     """Set av user-story-id:n som redan är länkade till epicen."""
     related = api("GET", f"/api/v1/epics/{epic_id}/related_userstories", token=token)
-    return {r["user_story"] for r in (related or [])}
+    if not isinstance(related, list):
+        # Paginated or unexpected response shape — fall back to empty set;
+        # link_story() handles the resulting 400 gracefully.
+        return set()
+    return {r["user_story"] for r in related}
 
 
 def story_epic_labels(token, epic_id_by_subject, epic_subjects):
@@ -522,11 +526,19 @@ def main(argv):
             if us_id in already:
                 already_linked += 1
             else:
-                api("POST", f"/api/v1/epics/{epic_id}/related_userstories", token=token,
-                    payload={"epic": epic_id, "user_story": us_id})
+                body, status = api_allow_http_error(
+                    "POST", f"/api/v1/epics/{epic_id}/related_userstories",
+                    token=token, payload={"epic": epic_id, "user_story": us_id},
+                )
                 already.add(us_id)
-                linked += 1
-                print("      ↳ länkad till epic")
+                if status in (200, 201):
+                    linked += 1
+                    print("      ↳ länkad till epic")
+                elif status == 400 and "already exists" in json.dumps(body).lower():
+                    already_linked += 1
+                else:
+                    detail = json.dumps(body, ensure_ascii=False) if isinstance(body, dict) else str(body)
+                    sys.exit(f"API-fel {status} på POST /api/v1/epics/{epic_id}/related_userstories: {detail}")
 
     print(
         f"\nKlart. Stories: {created_us} skapade, {existing_us} befintliga "
