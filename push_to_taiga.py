@@ -244,7 +244,9 @@ def resolve_status(name, status_map):
 
 
 def story_differs(remote, desired, desired_status_id=None):
-    """True om description, taggnamn eller status skiljer sig från JSON-källan."""
+    """True om subject, description, taggnamn eller status skiljer sig från JSON-källan."""
+    if (remote.get("subject") or "") != (desired.get("subject") or ""):
+        return True
     if (remote.get("description") or "") != (desired.get("description") or ""):
         return True
     if tag_names(remote.get("tags")) != list(desired.get("tags") or []):
@@ -267,6 +269,7 @@ def patch_user_story(token, us_id, desired, desired_status_id=None):
 
         payload = {
             "version": remote["version"],
+            "subject": desired["subject"],
             "description": desired["description"],
             "tags": tags_for_taiga(desired["tags"], remote.get("tags")),
         }
@@ -487,6 +490,11 @@ def main(argv):
                       for e in api_all("/api/v1/epics", token, project_id)}
     story_id_by_subject = {us["subject"]: us["id"]
                            for us in api_all("/api/v1/userstories", token, project_id)}
+    story_id_by_code = {}
+    for _subj, _sid in story_id_by_subject.items():
+        _code = _subj.split(" — ", 1)[0].strip()
+        if _code.startswith("US-"):
+            story_id_by_code.setdefault(_code, _sid)
 
     created_us, existing_us, updated_us, unchanged_us = 0, 0, 0, 0
     linked, already_linked = 0, 0
@@ -499,6 +507,9 @@ def main(argv):
         for s in stories:
             desired_status_id = resolve_status(s.get("status"), status_map)
             us_id = story_id_by_subject.get(s["subject"])
+            if us_id is None:
+                _code = s["subject"].split(" — ", 1)[0].strip()
+                us_id = story_id_by_code.get(_code)
             if us_id is None:
                 create_payload = {
                     "project": project_id,
