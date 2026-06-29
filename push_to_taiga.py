@@ -20,7 +20,11 @@ omdöpta titlar), utan att pusha:
     python3 push_to_taiga.py --list-orphans
     python3 push_to_taiga.py --list-orphans epic-b.json epic-d.json
 
-Utan filargument läser --list-orphans alla taiga/epic-*.json i samma katalog.
+Radera föräldralösa stories direkt (kombinera med DRY_RUN=1 för förhandsgranskning):
+    python3 push_to_taiga.py --delete-orphans
+    DRY_RUN=1 python3 push_to_taiga.py --delete-orphans
+
+Utan filargument läser --list-orphans / --delete-orphans alla taiga/epic-*.json i samma katalog.
 
 Ta bort dubbletter (epics och stories med identisk titel — behåller lägst id):
     python3 push_to_taiga.py --clean-duplicates
@@ -80,13 +84,17 @@ ORPHAN_SUBJECT_PREFIX = "US-"
 
 
 def parse_argv(argv):
-    """Returnerar (orphans_only, statuses_only, clean_duplicates, epic_paths)."""
+    """Returnerar (orphans_only, delete_orphans, statuses_only, clean_duplicates, epic_paths)."""
     orphans_only = False
+    delete_orphans = False
     statuses_only = False
     clean_duplicates = False
     paths = []
     for arg in argv:
         if arg == "--list-orphans":
+            orphans_only = True
+        elif arg == "--delete-orphans":
+            delete_orphans = True
             orphans_only = True
         elif arg == "--list-statuses":
             statuses_only = True
@@ -94,7 +102,7 @@ def parse_argv(argv):
             clean_duplicates = True
         else:
             paths.append(arg)
-    return orphans_only, statuses_only, clean_duplicates, paths
+    return orphans_only, delete_orphans, statuses_only, clean_duplicates, paths
 
 
 def default_epic_paths():
@@ -335,8 +343,11 @@ def login():
     return token, project["id"]
 
 
-def list_orphans(epics, token, project_id):
-    """Skriver ut US-*-stories i Taiga som saknas i JSON-källorna."""
+def list_orphans(epics, token, project_id, delete=False):
+    """Skriver ut US-*-stories i Taiga som saknas i JSON-källorna.
+
+    Om delete=True raderas varje orphan direkt (DRY_RUN=1 visar vad som skulle raderas).
+    """
     known = expected_subjects(epics)
     managed_epics = [subject for subject, _ in epics]
 
@@ -371,13 +382,26 @@ def list_orphans(epics, token, project_id):
         return 0
 
     print(f"Föräldralösa user stories ({len(orphans)} st) — finns i Taiga, saknas i JSON:\n")
+    removed = 0
     for row in orphans:
         state = "stängd" if row["is_closed"] else "öppen"
         epic_text = ", ".join(row["epics"]) if row["epics"] else "(ej länkad till epic)"
         print(f"  #{row['ref']:<4} id={row['id']:<5}  [{state}]  {row['subject']}")
         print(f"           epic: {epic_text}")
+        if delete:
+            if DRY_RUN:
+                print(f"           [DRY] skulle radera id={row['id']}")
+            else:
+                api("DELETE", f"/api/v1/userstories/{row['id']}", token=token)
+                print(f"           ✖ raderad")
+                removed += 1
 
-    print("\nTa bort eller stäng dessa manuellt i Taiga om de ersatts av nya titlar.")
+    if delete:
+        verb = "Skulle radera" if DRY_RUN else "Raderade"
+        print(f"\n{verb}: {len(orphans) if DRY_RUN else removed} föräldralösa stories.")
+    else:
+        print("\nTa bort eller stäng dessa manuellt i Taiga om de ersatts av nya titlar.")
+        print("Tips: kör med --delete-orphans för att radera direkt.")
     return len(orphans)
 
 
@@ -424,7 +448,7 @@ def clean_duplicates(token, project_id):
 
 
 def main(argv):
-    orphans_only, statuses_only, clean_dups, paths = parse_argv(argv)
+    orphans_only, delete_orphans, statuses_only, clean_dups, paths = parse_argv(argv)
 
     if clean_dups:
         if not USER or not PASS:
@@ -457,13 +481,8 @@ def main(argv):
     epics = load_epics(paths)
 
     if orphans_only:
-        if DRY_RUN:
-            known = expected_subjects(epics)
-            print(f"DRY_RUN — skulle lista föräldralösa US-*-stories i {SLUG} "
-                  f"(jämför mot {len(known)} ämnen i {len(epics)} epic-filer).")
-            return
         token, project_id = login()
-        list_orphans(epics, token, project_id)
+        list_orphans(epics, token, project_id, delete=delete_orphans)
         return
 
     if DRY_RUN:
